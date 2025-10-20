@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+     <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="profile">
+      <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="Staff">
+      <h3 id="staffName">NAME OF THE STAFF</h3>
+    </div>
+    <ul class="menu">
+      <li class="active" onclick="showSection('dashboard')"><i class="fas fa-home"></i> Dashboard</li>
+      <li onclick="showSection('patient')"><i class="fas fa-user"></i> Cellsus</li>
+      <li onclick="showSection('schedule')"><i class="fas fa-calendar"></i> Schedule List</li>
+      <li onclick="showSection('monthlySick')"><i class="fas fa-chart-bar"></i> Statistic Chart</li>
+      <li onclick="showSection('evaluation-section')"><i class="fas fa-star"></i> Evaluation</li>
+      <button onclick="logout()">Logout</button>
+    </ul>
+  </div>
+    <!-- Monthly Sick -->
+    <div id="monthlySick" class="content">
+      <div class="header-container">MONTHLY SICK PATIENT</div>
+      <div class="chart-container">
+        <canvas id="sickChart"></canvas>
+      </div>
+
+      <div class="table-container">
+        <h3>MONTHLY RECORDS</h3>
+        <div class="table-nav">
+          <button id="prevCols">&#9664;</button>
+          <button id="nextCols">&#9654;</button>
+        </div>
+
+  <table>
+  <thead>
+  <tr>
+    <th>Month</th>
+    <th>Fever</th>
+    <th>Vomiting</th>
+    <th>Diarrhea</th>
+    <th>Rashes</th>
+    <th>Head Ache</th>
+    <th>Infection</th>
+    <th>Dizzy</th>
+    <th>Dysmenorrhea</th>
+    <th>Allergy</th>
+    <th>Acid</th>
+    <th>Asthma</th>
+    <th>Toothache</th>
+    <th>Body pain</th>
+    <th>Stomach ache</th>
+    <th>Hyperacidity</th>
+    <th>Eye irritation</th>
+    <th>Abdominal pain</th>
+    <th>Heart burn</th>
+    <th>Palpitate</th>
+    <th>Anxiety</th>
+    <th>Lbm</th>
+    <th>Blood pressure</th>
+    <th>Boil</th>
+    <th>Sore throat</th>
+  </tr>
+</thead>
+
+          <tbody id="recordsTable"></tbody>
+        </table>
+      </div>
+    </div>
+      <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // monthly sick
+    const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    let monthData = JSON.parse(localStorage.getItem(userKey("monthData"))) || {};
+
+    const ctx = document.getElementById('sickChart').getContext('2d');
+    let sickChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['Fever', 'Vomiting', 'Diarrhea', 'Rashes', 'Head Ache', 'Infection', 'Dizzy', 'Dysmenorrhea', 'Allergy', 'Acid', 'Asthma','Toothache', 'Body pain', 'Stomach ache', 'Hyperacidity', 'Eye irritation', 'Abdominal pain', 'Heart burn', 'Palpitate', 'Anxiety', 'Lbm', 'Blood pressure', 'Boil', 'Sore throat'],
+        datasets: []
+      },
+      options: { responsive: true, scales: { y: { beginAtZero: true, max: 50 } } }
+    });
+
+    function renderChart() {
+      sickChart.data.datasets = Object.keys(monthData).map((m, i) => ({
+        label: m,
+        data: monthData[m],
+        backgroundColor: [
+          "rgba(255, 99, 132, 0.7)",
+          "rgba(255, 159, 64, 0.7)",
+          "rgba(75, 192, 192, 0.7)",
+          "rgba(153, 102, 255, 0.7)",
+          "rgba(255, 205, 86, 0.7)",
+          "rgba(54, 162, 235, 0.7)",
+          "rgba(300, 162, 235, 0.7)",
+          "rgba(300, 162, 235, 0.7)",
+          "rgba(300, 162, 235, 0.7)",
+          "rgba(300, 162, 235, 0.7)",
+          "rgba(300, 162, 235, 0.7)",
+          "rgba(300, 162, 235, 0.7)",
+          "rgba(300, 162, 235, 0.7)",
+          "rgba(300, 162, 235, 0.7)",
+          "rgba(300, 162, 235, 0.7)",
+          "rgba(300, 162, 235, 0.7)",
+          "rgba(300, 162, 235, 0.7)",
+          "rgba(300, 162, 235, 0.7)",
+          "rgba(300, 162, 235, 0.7)",
+          "rgba(300, 162, 235, 0.7)",
+          "rgba(300, 162, 235, 0.7)",
+          "rgba(300, 162, 235, 0.7)",
+          "rgba(300, 162, 235, 0.7)"
+
+        ],
+        borderColor: "black",
+        borderWidth: 1
+      }));
+      sickChart.update();
+    }
+
+    function renderTable() {
+  const table = document.getElementById("recordsTable");
+  table.innerHTML = "";
+  for (let month in monthData) {
+    const values = monthData[month];
+    const row = `<tr>
+      <td>${month}</td>
+      ${values.map(v => (v === undefined || v === null ? 0 : v)).map(v => `<td>${v}</td>`).join("")}
+    </tr>`;
+    table.innerHTML += row;
+  }
+}
+
+
+    function updateMonthlySick(complaint) {
+  const currentMonth = monthNames[new Date().getMonth()];
+  if (!monthData[currentMonth]) monthData[currentMonth] = new Array(24).fill(0);
+  const c = complaint.toLowerCase();
+
+  if (c.includes("fever")) monthData[currentMonth][0] += 1;
+  if (c.includes("vomit")) monthData[currentMonth][1] += 1;
+  if (c.includes("diarrhea")) monthData[currentMonth][2] += 1;
+  if (c.includes("rash")) monthData[currentMonth][3] += 1;
+  if (c.includes("head")) monthData[currentMonth][4] += 1;
+  if (c.includes("infect")) monthData[currentMonth][5] += 1;
+  if (c.includes("dizzy")) monthData[currentMonth][6] += 1;
+  if (c.includes("dysmenorrhea")) monthData[currentMonth][7] += 1;
+  if (c.includes("allergy")) monthData[currentMonth][8] += 1;
+  if (c.includes("acid")) monthData[currentMonth][9] += 1;
+  if (c.includes("asthma")) monthData[currentMonth][10] += 1;
+  if (c.includes("toothache")) monthData[currentMonth][11] += 1;
+  if (c.includes("body pain")) monthData[currentMonth][12] += 1;
+  if (c.includes("stomach ache")) monthData[currentMonth][13] += 1;
+  if (c.includes("hyperacidity")) monthData[currentMonth][14] += 1;
+  if (c.includes("eye irritation")) monthData[currentMonth][15] += 1;
+  if (c.includes("abdominal pain")) monthData[currentMonth][16] += 1;
+  if (c.includes("heart burn")) monthData[currentMonth][17] += 1;
+  if (c.includes("palpitate")) monthData[currentMonth][18] += 1;
+  if (c.includes("anxiety")) monthData[currentMonth][19] += 1;
+  if (c.includes("lbm")) monthData[currentMonth][20] += 1;
+  if (c.includes("blood pressure")) monthData[currentMonth][21] += 1;
+  if (c.includes("boil")) monthData[currentMonth][22] += 1;
+  if (c.includes("sore throat")) monthData[currentMonth][23] += 1;
+
+  localStorage.setItem(userKey("monthData"), JSON.stringify(monthData));
+  renderChart();
+  renderTable();
+}
+// ===== COLUMN PAGINATION FIX=====
+document.addEventListener("DOMContentLoaded", () => {
+  const colsPerPage = 12;
+  let currentPage = 0;
+
+  function updateColumnVisibility() {
+    const table = document.querySelector("#recordsTable").closest("table");
+    if (!table) return;
+
+    const allRows = table.querySelectorAll("tr");
+    allRows.forEach(row => {
+      const cells = Array.from(row.children);
+      cells.forEach((cell, index) => {
+        if (index === 0) return; // "Month" always visible
+        const start = currentPage * colsPerPage + 1;
+        const end = start + colsPerPage;
+        cell.style.display = index >= start && index < end ? "" : "none";
+      });
+    });
+  }
+
+  // Re-run every time your table updates
+  const observer = new MutationObserver(updateColumnVisibility);
+  observer.observe(document.getElementById("recordsTable"), { childList: true, subtree: true });
+
+  // Button listeners
+  document.getElementById("prevCols")?.addEventListener("click", () => {
+    currentPage = Math.max(0, currentPage - 1);
+    updateColumnVisibility();
+  });
+
+  document.getElementById("nextCols")?.addEventListener("click", () => {
+    const maxPage = Math.ceil(24 / colsPerPage) - 1; // 24 columns total
+    currentPage = Math.min(maxPage, currentPage + 1);
+    updateColumnVisibility();
+  });
+
+  updateColumnVisibility();
+});
+
+
+    // page load
+    document.addEventListener("DOMContentLoaded", () => {
+      loadPatients();
+      loadSchedules();
+      renderChart();
+      renderTable();
+      checkDailyReset(); 
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="profile">
+      <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="Staff">
+      <h3 id="staffName">NAME OF THE STAFF</h3>
+    </div>
+    <ul class="menu">
+      <li class="active" onclick="showSection('dashboard')"><i class="fas fa-home"></i> Dashboard</li>
+      <li onclick="showSection('patient')"><i class="fas fa-user"></i> Cellsus</li>
+      <li onclick="showSection('schedule')"><i class="fas fa-calendar"></i> Schedule List</li>
+      <li onclick="showSection('monthlySick')"><i class="fas fa-chart-bar"></i> Statistic Chart</li>
+      <li onclick="showSection('evaluation-section')"><i class="fas fa-star"></i> Evaluation</li>
+      <button onclick="logout()">Logout</button>
+    </ul>
+  </div>
+  <!-- Schedule -->
+    <div id="schedule" class="schedule-section">
+      <h3>PATIENT SCHEDULE LIST</h3>
+      <div class="form-inline">
+        <input type="text" id="scheduleTitle" placeholder="Name">
+        <input type="date" id="scheduleDate">
+        <input type="time" id="scheduleTime">
+        <textarea id="scheduleNotes" placeholder="Notes" rows="1" cols="20"></textarea>
+        <button onclick="addSchedule()">Add Schedule</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Notes</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="scheduleTable"></tbody>
+      </table>
+    </div>
+<!-- 🩵 TOTAL APPOINTMENTS MODAL -->
+<div id="appointmentsModal" class="modal" style="display:none;">
+  <div class="modal-content" style="max-width: 850px;">
+    <span class="close" onclick="closeAppointmentsModal()">&times;</span>
+    <h2>Total Appointments</h2>
+    <p style="margin-bottom: 15px;">All appointments including deleted ones</p>
+
+    <div class="appointment-stats">
+      <div class="card small"><strong>Total:</strong> <span id="totalCount">0</span></div>
+      <div class="card small"><strong>Active:</strong> <span id="activeCount">0</span></div>
+      <div class="card small"><strong>Deleted:</strong> <span id="deletedCount">0</span></div>
+    </div>
+
+    <div class="filters">
+      <button class="filter-btn active" onclick="filterAppointments('all')">All</button>
+      <button class="filter-btn" onclick="filterAppointments('active')">Active</button>
+      <button class="filter-btn" onclick="filterAppointments('deleted')">Deleted</button>
+      <input type="text" id="searchAppointments" placeholder="🔍 Search appointments..." oninput="filterAppointments(currentFilter)">
+    </div>
+
+    <div id="appointmentsList" class="appointments-list"></div>
+  </div>
+</div>
+
+    <script>
+        //schedule list
+    function loadSchedules() {
+      const schedules = JSON.parse(localStorage.getItem(userKey("schedules"))) || [];
+      const table = document.getElementById("scheduleTable");
+      table.innerHTML = "";
+      schedules.forEach((sched, index) => {
+        const row = table.insertRow();
+        row.insertCell(0).textContent = sched.title;
+        row.insertCell(1).textContent = sched.date;
+        row.insertCell(2).textContent = sched.time;
+        row.insertCell(3).textContent = sched.notes;
+
+        const actionCell = row.insertCell(4);
+        const delBtn = document.createElement("button");
+        delBtn.textContent = "Archive";
+        delBtn.classList.add("archive-btn");
+        delBtn.onclick = () => deleteSchedule(index);
+        actionCell.appendChild(delBtn);
+      });
+
+          /* --- Schedule Notifications (no duplicates) --- */
+    function checkUpcomingSchedules() {
+      let schedules = JSON.parse(localStorage.getItem(userKey("schedules"))) || [];
+      const now = new Date().getTime();
+
+      schedules.forEach((sched, index) => {
+        const schedDateTime = new Date(`${sched.date}T${sched.time}`).getTime();
+        const diff = schedDateTime - now;
+
+        // Kung walang notified flag, gawin siyang false by default
+        if (sched.notified === undefined) {
+          sched.notified = { before: false, ontime: false };
+        }
+
+        // Notify 5 minutes before (once only)
+        if (!sched.notified.before && diff > 0 && diff <= 5 * 60 * 1000) {
+          alert(`⏰ Reminder: "${sched.title}" at ${sched.time} (${sched.date}) is starting soon!`);
+          sched.notified.before = true;
+        }
+
+        // Notify exactly on time (once only, within 1 min)
+        if (!sched.notified.ontime && Math.abs(diff) <= 60000) {
+          alert(`🚨 It's time for: "${sched.title}" (${sched.date} ${sched.time})`);
+          sched.notified.ontime = true;
+        }
+
+        // Update schedule back to storage
+        schedules[index] = sched;
+      });
+
+      localStorage.setItem(userKey("schedules"), JSON.stringify(schedules));
+    }
+
+    // Check every 1 minute
+    setInterval(checkUpcomingSchedules, 60000);
+    /* --- Schedule Notifications (no duplicates) --- */
+    function checkUpcomingSchedules() {
+      let schedules = JSON.parse(localStorage.getItem(userKey("schedules"))) || [];
+      const now = new Date().getTime();
+
+      schedules.forEach((sched, index) => {
+        const schedDateTime = new Date(`${sched.date}T${sched.time}`).getTime();
+        const diff = schedDateTime - now;
+
+        // Kung walang notified flag, gawin siyang false by default
+        if (sched.notified === undefined) {
+          sched.notified = { before: false, ontime: false };
+        }
+
+        // Notify 5 minutes before (once only)
+        if (!sched.notified.before && diff > 0 && diff <= 5 * 60 * 1000) {
+          alert(`⏰ Reminder: "${sched.title}" at ${sched.time} (${sched.date}) is starting soon!`);
+          sched.notified.before = true;
+        }
+
+        // Notify exactly on time (once only, within 1 min)
+        if (!sched.notified.ontime && Math.abs(diff) <= 60000) {
+          alert(`🚨 It's time for: "${sched.title}" (${sched.date} ${sched.time})`);
+          sched.notified.ontime = true;
+        }
+
+        // Update schedule back to storage
+        schedules[index] = sched;
+      });
+
+      localStorage.setItem(userKey("schedules"), JSON.stringify(schedules));
+    }
+
+    // Check every 1 minute
+    setInterval(checkUpcomingSchedules, 60000);
+
+    }
+
+    function addSchedule() {
+      const title = document.getElementById("scheduleTitle").value;
+      const date = document.getElementById("scheduleDate").value;
+      const time = document.getElementById("scheduleTime").value;
+      const notes = document.getElementById("scheduleNotes").value;
+      if (!title || !date || !time) {
+        alert("Please fill in all fields."); return;
+      }
+      const schedules = JSON.parse(localStorage.getItem(userKey("schedules"))) || [];
+      schedules.push({ title, date, time, notes });
+      localStorage.setItem(userKey("schedules"), JSON.stringify(schedules));
+      loadSchedules();
+      document.getElementById("scheduleTitle").value = "";
+      document.getElementById("scheduleDate").value = "";
+      document.getElementById("scheduleTime").value = "";
+      document.getElementById("scheduleNotes").value = "";
+    }
+
+    function deleteSchedule(index) {
+      const schedules = JSON.parse(localStorage.getItem(userKey("schedules"))) || [];
+      schedules.splice(index, 1);
+      localStorage.setItem(userKey("schedules"), JSON.stringify(schedules));
+      loadSchedules();
+    }
+    
+     // === 🩵 TOTAL APPOINTMENTS MODAL HANDLER ===
+const totalAppointmentsCard = document.querySelectorAll(".card")[3]; // 4th card (Total Appointment)
+if (totalAppointmentsCard) {
+  totalAppointmentsCard.style.cursor = "pointer";
+  totalAppointmentsCard.addEventListener("click", openAppointmentsModal);
+}
+
+let currentFilter = "all";
+
+function openAppointmentsModal() {
+  const m = document.getElementById('appointmentsModal');
+  if (!m) return;
+  m.style.display = 'flex';
+  loadAppointmentsList();
+}
+function closeAppointmentsModal() {
+  const m = document.getElementById('appointmentsModal');
+  if (!m) return;
+  m.style.display = 'none';
+}
+
+// Close by clicking overlay (outside modal content)
+document.addEventListener('click', function (e) {
+  // appointments modal overlay
+  const apModal = document.getElementById('appointmentsModal');
+  if (apModal && apModal.style.display === 'flex') {
+    if (e.target === apModal) closeAppointmentsModal();
+  }
+  // response modal overlay
+  const respModal = document.getElementById('responseModal');
+  if (respModal && respModal.style.display === 'flex') {
+    if (e.target === respModal) closeModal(); // uses your closeModal()
+  }
+  // stats modal overlay
+  const statsModal = document.getElementById('statsModal');
+  if (statsModal && statsModal.style.display === 'flex') {
+    if (e.target === statsModal) closeStats(); // uses your closeStats()
+  }
+});
+
+
+function loadAppointmentsList() {
+  const active = JSON.parse(localStorage.getItem(userKey("schedules"))) || [];
+  const deleted = JSON.parse(localStorage.getItem(userKey("deletedSchedules"))) || [];
+  const schedules = [...active, ...deleted];
+  
+  const totalCount = document.getElementById("totalCount");
+  const activeCount = document.getElementById("activeCount");
+  const deletedCount = document.getElementById("deletedCount");
+
+  totalCount.textContent = schedules.length;
+  activeCount.textContent = active.length;
+  deletedCount.textContent = deleted.length;
+
+  renderAppointments(schedules);
+}
+
+
+function renderAppointments(schedules) {
+  const list = document.getElementById("appointmentsList");
+  const search = document.getElementById("searchAppointments").value.toLowerCase();
+  let filtered = schedules;
+
+  if (currentFilter === "active") {
+    filtered = schedules.filter(s => s.status !== "deleted");
+  } else if (currentFilter === "deleted") {
+    filtered = schedules.filter(s => s.status === "deleted");
+  }
+
+  if (search) {
+    filtered = filtered.filter(s => s.title.toLowerCase().includes(search));
+  }
+
+  list.innerHTML = "";
+
+  if (filtered.length === 0) {
+    list.innerHTML = "<p>No appointments found.</p>";
+    return;
+  }
+
+  filtered.forEach((sched, index) => {
+    const div = document.createElement("div");
+    div.className = "appointment-item";
+    div.innerHTML = `
+      <div>
+        <h3>${sched.title}</h3>
+        <p><i class="far fa-calendar"></i> ${sched.date} 
+           <i class="far fa-clock"></i> ${sched.time}</p>
+        <p>${sched.notes || ""}</p>
+      </div>
+      <span class="status ${sched.status === "deleted" ? "deleted" : "active"}">
+        ${sched.status === "deleted" ? "Deleted" : "Active"}
+      </span>
+    `;
+    list.appendChild(div);
+  });
+}
+
+function filterAppointments(type) {
+  currentFilter = type;
+  document.querySelectorAll(".filter-btn").forEach(btn => btn.classList.remove("active"));
+  document.querySelector(`.filter-btn:nth-child(${type === "all" ? 1 : type === "active" ? 2 : 3})`).classList.add("active");
+  loadAppointmentsList();
+}
+
+// === 🩵 FIX: Proper delete + record to deleted list ===
+const originalDeleteSchedule = deleteSchedule;
+deleteSchedule = function(index) {
+  let schedules = JSON.parse(localStorage.getItem(userKey("schedules"))) || [];
+  if (!schedules[index]) return;
+
+  // Get deleted appointment
+  const deletedItem = { ...schedules[index], status: "deleted", deletedAt: new Date().toISOString() };
+
+  // Save to deleted list (for Total Appointments)
+  let deletedList = JSON.parse(localStorage.getItem(userKey("deletedSchedules"))) || [];
+  deletedList.push(deletedItem);
+  localStorage.setItem(userKey("deletedSchedules"), JSON.stringify(deletedList));
+
+  // Remove from active schedules
+  schedules.splice(index, 1);
+  localStorage.setItem(userKey("schedules"), JSON.stringify(schedules));
+
+  loadSchedules();
+  loadAppointmentsList(); // refresh modal counts if open
+};
+    </script>
+</body>
+</html>

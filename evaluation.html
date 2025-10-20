@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <!-- EVALUATION LIST SECTION -->
+<section id="evaluation-section" class="evaluation-section content">
+  <div class="evaluation-header">
+    <h2>PATIENT EVALUATION RESPONSES</h2>
+    <p>Below are all responses of the patients</p>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>No.</th>
+        <th>Patient Name</th>
+        <th>Timestamp</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="patientTableBody"></tbody>
+  </table>
+
+
+  <!-- Modal Popup -->
+<div id="responseModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeModal()">&times;</span>
+    <h2>Patient Response</h2>
+    <p><strong>Name:</strong> <span id="modalName"></span></p>
+    <p><strong>Email:</strong> <span id="modalEmail"></span></p>
+
+    <!-- This is where all the questions will appear -->
+    <div id="modalQuestions"></div>
+
+    <p><strong>Timestamp:</strong> <span id="modalTime"></span></p>
+
+    <div class="modal-buttons">
+      <button id="prevBtn" onclick="prevResponse()">Previous</button>
+      <button id="nextBtn" onclick="nextResponse()">Next</button>
+    </div>
+  </div>
+</div> 
+
+<!-- Floating Stats Button -->
+<button id="statsBtn" class="stats-btn" title="View Evaluation Statistics">📊 Stats</button>
+<div id="statsModal" class="modal-stats" aria-hidden="true">
+  <div class="modal-stats-content">
+    <button class="close-stats" onclick="closeStats()">✕</button>
+    <h2>Evaluation Statistics</h2>
+
+
+    <div class="chart-area">
+      <canvas id="statsChart" width="800" height="400"></canvas>
+    </div>
+
+    <div id="statsSummary" class="stats-summary"></div>
+  </div>
+</div>
+</section>
+  </div>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        //Evaluation statistic
+const sheetUrl =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFRPhnCs-F25Rs0hi_j7vV8nmxMkputFJaORMHg_AH7GyBGgltIcuGghcbejMpgHlPcXkdgvY5otwy/pub?output=csv";
+
+let responses = [];
+let currentIndex = 0;
+
+fetch(sheetUrl)
+  .then(res => res.text())
+  .then(csv => {
+    const rows = parseCSV(csv);
+    const table = document.getElementById("patientTableBody");
+    table.innerHTML = "";
+
+    // skip header row 
+    rows.slice(1).forEach((cols, index) => {
+      if (!cols.length) return;
+
+      const timestamp = cols[0] || "N/A";
+      const name = cols[1] || "N/A";
+      const email = cols[2] || "N/A";
+
+      const questions = cols.slice(3); 
+
+      const dateObj = new Date(timestamp);
+      const formattedTime = isNaN(dateObj)
+        ? timestamp
+        : dateObj.toLocaleString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+          });
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${index + 1}</td>
+        <td>${name}</td>
+        <td>${formattedTime}</td>
+        <td>
+          <button class="view-btn" onclick="openResponse(${index})">View</button>
+        </td>
+      `;
+      table.appendChild(tr);
+
+      responses.push({ name, email, questions, formattedTime });
+    });
+  })
+  .catch(err => console.error("Error loading data:", err));
+
+function openResponse(index) {
+  currentIndex = index;
+  showResponse(index);
+  document.getElementById("responseModal").style.display = "flex";
+}
+
+function showResponse(index) {
+  const res = responses[index];
+  if (!res) return;
+
+  document.getElementById("modalName").innerText = res.name;
+  document.getElementById("modalEmail").innerText = res.email;
+  document.getElementById("modalTime").innerText = res.formattedTime;
+
+  // get all responses
+  const qContainer = document.getElementById("modalQuestions");
+  qContainer.innerHTML = "";
+  res.questions.forEach((ans, i) => {
+    const p = document.createElement("p");
+    p.innerHTML = `<strong>Q${i + 1}:</strong> ${ans || "No response"}`;
+    qContainer.appendChild(p);
+  });
+
+  document.getElementById("prevBtn").disabled = index === 0;
+  document.getElementById("nextBtn").disabled = index === responses.length - 1;
+}
+
+function closeModal() {
+  document.getElementById("responseModal").style.display = "none";
+}
+
+function nextResponse() {
+  if (currentIndex < responses.length - 1) {
+    currentIndex++;
+    showResponse(currentIndex);
+  }
+}
+
+function prevResponse() {
+  if (currentIndex > 0) {
+    currentIndex--;
+    showResponse(currentIndex);
+  }
+}
+
+// handling commas
+function parseCSV(str) {
+  const rows = [];
+  let current = [];
+  let value = "";
+  let insideQuotes = false;
+
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+
+    if (char === '"' && str[i + 1] === '"') {
+      value += '"';
+      i++;
+    } else if (char === '"') {
+      insideQuotes = !insideQuotes;
+    } else if (char === "," && !insideQuotes) {
+      current.push(value.trim());
+      value = "";
+    } else if (char === "\n" && !insideQuotes) {
+      current.push(value.trim());
+      rows.push(current);
+      current = [];
+      value = "";
+    } else {
+      value += char;
+    }
+  }
+  if (value) current.push(value.trim());
+  if (current.length) rows.push(current);
+  return rows;
+}
+const EVAL_SHEET_CSV =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFRPhnCs-F25Rs0hi_j7vV8nmxMkputFJaORMHg_AH7GyBGgltIcuGghcbejMpgHlPcXkdgvY5otwy/pub?output=csv";
+
+const QUESTIONS = [
+  "Q1: Overall experience satisfaction",
+  "Q2: Recommend the clinic to others",
+  "Q3: Main reason for your visit",
+  "Q4: Ease of booking or access",
+  "Q5: Waiting time before seeing staff",
+  "Q6: Convenience of clinic hours/location",
+  "Q7: Friendliness and helpfulness of staff",
+  "Q8: Effectiveness of treatment/advice",
+  "Q9: Clarity of staff explanation",
+  "Q10: Privacy and confidentiality satisfaction",
+  "Q11: Cleanliness of clinic facility",
+  "Q12: Adequacy of clinic resources",
+  "Q13: Suggested improvements",
+  "Q14: Patient relationship improvement ideas",
+  "Q15: Other comments or feedback"
+];
+
+function parseCSV(csv) {
+  const rows = [];
+  let cur = [], curVal = '', inQuotes = false;
+  for (let i = 0; i < csv.length; i++) {
+    const ch = csv[i], next = csv[i + 1];
+    if (ch === '"' && next === '"') { curVal += '"'; i++; continue; }
+    if (ch === '"') { inQuotes = !inQuotes; continue; }
+    if (ch === ',' && !inQuotes) { cur.push(curVal); curVal = ''; continue; }
+    if ((ch === '\n' || ch === '\r') && !inQuotes) {
+      if (ch === '\r' && csv[i + 1] === '\n') i++;
+      cur.push(curVal);
+      rows.push(cur);
+      cur = []; curVal = '';
+      continue;
+    }
+    curVal += ch;
+  }
+  if (curVal !== '' || cur.length) { cur.push(curVal); rows.push(cur); }
+  return rows;
+}
+
+// UI elements
+const statsBtn = document.getElementById('statsBtn');
+const statsModal = document.getElementById('statsModal');
+const chartCanvas = document.getElementById('statsChart');
+const summaryBox = document.getElementById('statsSummary');
+let statsChart = null;
+
+// open modal
+statsBtn.addEventListener('click', () => {
+  statsModal.style.display = 'flex';
+  loadAllStatistics();
+});
+
+// close modal
+function closeStats() {
+  statsModal.style.display = 'none';
+}
+
+// close when clicking outside
+window.addEventListener('click', (e) => {
+  if (e.target === statsModal) {
+    closeStats();
+  }
+});
+
+// load stats
+async function loadAllStatistics() {
+  try {
+    const res = await fetch(EVAL_SHEET_CSV);
+    const text = await res.text();
+    const rows = parseCSV(text);
+    if (rows.length < 2) {
+      summaryBox.innerHTML = '<p>No responses found.</p>';
+      return;
+    }
+
+    const headers = rows[0];
+    const dataRows = rows.slice(1);
+    const startCol = 3; 
+    const totalResponses = dataRows.length;
+
+    const allChoices = new Set();
+    const questionStats = [];
+
+    // collect counts per question
+    for (let i = startCol; i < headers.length && i < startCol + 15; i++) {
+      const qCounts = {};
+      dataRows.forEach(r => {
+        const val = (r[i] || '').trim() || '(no answer)';
+        qCounts[val] = (qCounts[val] || 0) + 1;
+        allChoices.add(val);
+      });
+      questionStats.push({
+        question: QUESTIONS[i - startCol] || `Q${i - startCol + 1}`,
+        counts: qCounts
+      });
+    }
+
+  
+    renderOverallChart(questionStats, totalResponses);
+    
+    buildQuestionSummary(questionStats, totalResponses);
+
+  } catch (err) {
+    console.error("Stats load error:", err);
+    summaryBox.innerHTML = `<p style="color:red">Failed to load statistics. Please check your Google Sheet link.</p>`;
+  }
+}
+
+function renderOverallChart(questionStats, totalResponses) {
+  const ctx = chartCanvas.getContext('2d');
+  if (statsChart) statsChart.destroy();
+
+  // counts
+  const combinedCounts = {};
+  questionStats.forEach(q => {
+    for (const [choice, count] of Object.entries(q.counts)) {
+      combinedCounts[choice] = (combinedCounts[choice] || 0) + count;
+    }
+  });
+
+  const labels = Object.keys(combinedCounts);
+  const values = Object.values(combinedCounts);
+
+  statsChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Total Responses',
+        data: values,
+        backgroundColor: labels.map((_, i) => `hsl(${i * 40},70%,60%)`)
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        title: {
+          display: true,
+          text: 'Overall Evaluation Response Distribution'
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const pct = ((ctx.raw / totalResponses) * 100).toFixed(1);
+              return `${ctx.raw} responses (${pct}%)`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: 'Responses Count' }
+        }
+      }
+    }
+  });
+}
+
+// Build summary
+function buildQuestionSummary(questionStats, totalResponses) {
+  let html = `<strong>Total responses:</strong> ${totalResponses}<br><br>`;
+  questionStats.forEach(q => {
+    html += `<div class="q-summary">
+      <h4>${q.question}</h4>
+      <div class="choice-row">`;
+    for (const [choice, count] of Object.entries(q.counts)) {
+      html += `<div class="choice-item">
+        <span class="choice-label">${choice}</span><br>
+        <span class="choice-count">${count}</span>
+      </div>`;
+    }
+    html += `</div><hr></div>`;
+  });
+
+  summaryBox.innerHTML = html;
+
+  const style = document.createElement('style');
+  style.textContent = `
+    .q-summary { margin-bottom: 10px; }
+    .choice-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-left: 10px;
+      margin-bottom: 5px;
+    }
+    .choice-item {
+      text-align: center;
+      min-width: 90px;
+      font-size: 14px;
+    }
+    .choice-label { font-weight: bold; }
+    .choice-count { color: #333; }
+  `;
+  document.head.appendChild(style);
+}
+
+
+document.addEventListener("DOMContentLoaded", loadEvaluationData);
+
+    </script>
+</body>
+</html>

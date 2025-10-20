@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="profile">
+      <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="Staff">
+      <h3 id="staffName">NAME OF THE STAFF</h3>
+    </div>
+    <ul class="menu">
+      <li class="active" onclick="showSection('dashboard')"><i class="fas fa-home"></i> Dashboard</li>
+      <li onclick="showSection('patient')"><i class="fas fa-user"></i> Cellsus</li>
+      <li onclick="showSection('schedule')"><i class="fas fa-calendar"></i> Schedule List</li>
+      <li onclick="showSection('monthlySick')"><i class="fas fa-chart-bar"></i> Statistic Chart</li>
+      <li onclick="showSection('evaluation-section')"><i class="fas fa-star"></i> Evaluation</li>
+      <button onclick="logout()">Logout</button>
+    </ul>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <h2>DASHBOARD</h2>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard" class="content" style="display:block;">
+      <div class="dashboard-container">
+        <div class="card"><i class="fas fa-user icon"></i><h3 id="todayPatients">0</h3><p>Today Patient</p></div>
+        <div class="card"><i class="fas fa-users icon"></i><h3 id="totalPatients">0</h3><p>Total Patient</p></div>
+        <div class="card"><i class="fas fa-calendar-alt icon"></i><h3 id="todayAppointments">0</h3><p>Today Appointment</p></div>
+        <div class="card"><i class="fas fa-calendar-alt icon"></i><h3 id="totalAppointments">0</h3><p>Total Appointment</p></div>
+        <div class="card"><i class="fas fa-users icon"></i><h3>1</h3><p>Patient list</p></div>
+      </div>
+    </div>
+    <script>
+        // user login
+    const stored = sessionStorage.getItem('loggedInUser') || localStorage.getItem('loggedInUser');    
+    let loggedInUser = null;
+
+    try { loggedInUser = stored ? JSON.parse(stored) : null; }
+    catch (e) { loggedInUser = null; }
+
+    if (!loggedInUser) {
+      window.location.href = "login.html"; 
+    } else {
+      document.getElementById("staffName").textContent = (loggedInUser.firstName || "") + " " + (loggedInUser.lastName || "");
+    }
+
+    // per user
+    function userKey(key) {
+      return loggedInUser ? (key + "_" + loggedInUser.username) : key;
+    }
+
+    // section switching
+    function showSection(sectionId) {
+      document.querySelectorAll('.content, .patient-section, .schedule-section, .monthly-section').forEach(sec => sec.style.display = 'none');
+      if (sectionId) document.getElementById(sectionId).style.display = 'block';
+      document.querySelectorAll('.menu li').forEach(li => li.classList.remove('active'));
+      event.target.closest("li").classList.add('active');
+
+      const topbarTitle = document.querySelector('.topbar h2');
+      if (sectionId === 'dashboard') topbarTitle.textContent = 'DASHBOARD';
+      else if (sectionId === 'patient') topbarTitle.textContent = 'CELLSUS';
+      else if (sectionId === 'schedule') topbarTitle.textContent = 'SCHEDULE LIST';
+      else if (sectionId === 'monthlySick') topbarTitle.textContent = 'STATISTIC CHART';
+      else if (sectionId === 'evaluation-section') topbarTitle.textContent = 'EVALUATION';
+    }
+
+        // ====== Dashboard Counts ======
+    function updateDashboard() {
+      const patients = JSON.parse(localStorage.getItem(userKey("patients"))) || [];
+      const schedules = JSON.parse(localStorage.getItem(userKey("schedules"))) || [];
+
+      const todayStr = new Date().toLocaleDateString();
+
+      // Patients
+      const todayPatients = patients.filter(p => {
+        const d = new Date(p.date).toLocaleDateString();
+        return d === todayStr;
+      }).length;
+
+      const totalPatients = patients.length;
+
+      document.getElementById("todayPatients").textContent = todayPatients;
+      document.getElementById("totalPatients").textContent = totalPatients;
+
+      // Appointments
+      const todayAppointments = schedules.filter(s => {
+        const d = new Date(s.date).toLocaleDateString();
+        return d === todayStr;
+      }).length;
+
+      const totalAppointments = schedules.length;
+
+      document.getElementById("todayAppointments").textContent = todayAppointments;
+      document.getElementById("totalAppointments").textContent = totalAppointments;
+    }
+
+    //Reset Daily Counts after 24hrs 
+    function checkDailyReset() {
+      const lastResetKey = userKey("lastReset");
+      const lastReset = localStorage.getItem(lastResetKey);
+      const today = new Date().toDateString();
+
+      if (lastReset !== today) {
+        localStorage.setItem(lastResetKey, today);
+        updateDashboard();
+      } else {
+        updateDashboard();
+      }
+    }
+
+    function logout() {
+    localStorage.removeItem("loggedInUser");
+    sessionStorage.removeItem("loggedInUser");
+    window.location.href = "login.html";
+    }
+    </script>
+</body>
+</html>l

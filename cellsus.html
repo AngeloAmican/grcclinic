@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="profile">
+      <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="Staff">
+      <h3 id="staffName">NAME OF THE STAFF</h3>
+    </div>
+    <ul class="menu">
+      <li class="active" onclick="showSection('dashboard')"><i class="fas fa-home"></i> Dashboard</li>
+      <li onclick="showSection('patient')"><i class="fas fa-user"></i> Cellsus</li>
+      <li onclick="showSection('schedule')"><i class="fas fa-calendar"></i> Schedule List</li>
+      <li onclick="showSection('monthlySick')"><i class="fas fa-chart-bar"></i> Statistic Chart</li>
+      <li onclick="showSection('evaluation-section')"><i class="fas fa-star"></i> Evaluation</li>
+      <button onclick="logout()">Logout</button>
+    </ul>
+  </div>
+  <!-- Cellsus -->
+    <div id="patient" class="patient-section">
+      <h3>PATIENT</h3>
+      <div class="form-inline">
+        <input type="text" id="patientName" placeholder="Name">
+        <input type="text" id="patientCourse" placeholder="Course/Section">
+        <input type="text" id="patientID" placeholder="ID No#">
+        <input type="text" id="patientComplaint" placeholder="Complaint">
+        <input type="text" id="patientMedicine" placeholder="Medicine Given">
+        <button onclick="addPatient()">Add Patient</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Date/Time</th>
+            <th>Name</th>
+            <th>Course/Section</th>
+            <th>ID No#</th>
+            <th>Complaint</th>
+            <th>Medicine Given</th>
+          </tr>
+        </thead>
+        <tbody id="patientTable"></tbody>
+      </table>
+    </div>
+  <script>
+    //cellsus
+    function loadPatients() {
+      const patients = JSON.parse(localStorage.getItem(userKey("patients"))) || [];
+      const table = document.getElementById("patientTable");
+      table.innerHTML = "";
+      patients.forEach(p => {
+        const row = table.insertRow();
+        row.insertCell(0).textContent = p.date;
+        row.insertCell(1).textContent = p.name;
+        row.insertCell(2).textContent = p.course;
+        row.insertCell(3).textContent = p.id;
+        row.insertCell(4).textContent = p.complaint;
+        row.insertCell(5).textContent = p.medicine;
+      });
+    }
+
+    function addPatient() {
+      const name = document.getElementById("patientName").value;
+      const course = document.getElementById("patientCourse").value;
+      const id = document.getElementById("patientID").value;
+      const complaint = document.getElementById("patientComplaint").value;
+      const medicine = document.getElementById("patientMedicine").value;
+      if (!name || !course || !id || !complaint || !medicine) {
+        alert("Please fill in all fields."); return;
+      }
+      const now = new Date().toLocaleString();
+      const newPatient = { date: now, name, course, id, complaint, medicine };
+
+      const patients = JSON.parse(localStorage.getItem(userKey("patients"))) || [];
+      patients.push(newPatient);
+      localStorage.setItem(userKey("patients"), JSON.stringify(patients));
+      loadPatients();
+
+      document.getElementById("patientName").value = "";
+      document.getElementById("patientCourse").value = "";
+      document.getElementById("patientID").value = "";
+      document.getElementById("patientComplaint").value = "";
+      document.getElementById("patientMedicine").value = "";
+
+      updateMonthlySick(complaint);
+    }
+  </script>
+</body>
+</html>
